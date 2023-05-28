@@ -17,7 +17,7 @@ def send_request(content, url, auth, model):
         response = requests.post(url, headers=headers, data=json.dumps(data), timeout=150)
         response.raise_for_status()  # 将在HTTP错误时引发异常
     except requests.exceptions.RequestException as err:
-        return f"触发150s超时，请求发送错误: {err}"
+        return f"可能触发150s超时或其他原因，目前请求发送错误: {err}"
     
     try:
         json_response = response.json()

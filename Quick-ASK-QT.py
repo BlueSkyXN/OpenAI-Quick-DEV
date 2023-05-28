@@ -3,7 +3,8 @@ import requests
 import json
 import time
 import logging
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QTextEdit, QPushButton, QVBoxLayout, QWidget, QLabel, QMenu, QInputDialog, QLineEdit)
+import markdown
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QTextBrowser, QTextEdit, QPushButton, QVBoxLayout, QWidget, QLabel, QMenu, QInputDialog, QLineEdit)
 from PyQt6.QtCore import QTimer, QThread, pyqtSignal
 
 logging.basicConfig(filename='app.log', level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,10 +20,10 @@ def send_request(content, url, auth, model):
     }
     try:
         response = requests.post(url, headers=headers, data=json.dumps(data), timeout=150)
-        response.raise_for_status()  # 将在HTTP错误时引发异常
+        response.raise_for_status()
     except requests.exceptions.RequestException as err:
         logging.warning(f"Request sending error: {err}")
-        return f"触发150s超时，请求发送错误: {err}"
+        return f"可能触发150s超时或其他原因，目前请求发送错误: {err}"
     
     try:
         json_response = response.json()
@@ -63,7 +64,7 @@ class MainWindow(QMainWindow):
         self.submit_button.clicked.connect(self.on_submit)
         layout.addWidget(self.submit_button)
 
-        self.result_text = QTextEdit()
+        self.result_text = QTextBrowser()  # Use QTextBrowser instead of QTextEdit
         layout.addWidget(self.result_text)
 
         self.time_label = QLabel()
@@ -126,7 +127,7 @@ class MainWindow(QMainWindow):
 
     def on_result(self, response):
         self.timer.stop()
-        self.result_text.setPlainText(response)
+        self.result_text.setHtml(markdown.markdown(response))  # Use setHtml with markdown instead of setPlainText
 
 app = QApplication(sys.argv)
 window = MainWindow()
