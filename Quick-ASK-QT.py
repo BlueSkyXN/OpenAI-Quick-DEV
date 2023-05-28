@@ -4,7 +4,7 @@ import json
 import time
 import logging
 import markdown
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QTextBrowser, QTextEdit, QPushButton, QVBoxLayout, QWidget, QLabel, QMenu, QInputDialog, QLineEdit)
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QTextEdit, QPushButton, QVBoxLayout, QWidget, QLabel, QMenu, QInputDialog, QLineEdit, QDialog, QComboBox, QTextBrowser)
 from PyQt6.QtCore import QTimer, QThread, pyqtSignal
 
 logging.basicConfig(filename='app.log', level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -48,6 +48,84 @@ class SendRequestThread(QThread):
     def run(self):
         response = send_request(self.content, self.url, self.auth, self.model)
         self.finished.emit(response)
+
+class ChangeSettingsDialog(QDialog):
+    def __init__(self, title, label_text, default_text, settings_key, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+
+        layout = QVBoxLayout()
+
+        label = QLabel(label_text)
+        layout.addWidget(label)
+
+        self.line_edit = QLineEdit()
+        self.line_edit.setText(default_text)
+        layout.addWidget(self.line_edit)
+
+        button = QPushButton("提交修改")
+        button.clicked.connect(self.update_setting)
+        layout.addWidget(button)
+
+        self.setLayout(layout)
+
+        self.settings_key = settings_key
+        self.parent = parent
+
+    def update_setting(self):
+        new_value = self.line_edit.text()
+        self.parent.settings[self.settings_key] = new_value
+        self.close()
+
+class ModelSettingsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("模型设置")
+
+        layout = QVBoxLayout()
+
+        label = QLabel("请选择使用的模型：")
+        layout.addWidget(label)
+
+        self.combo_box = QComboBox()
+        self.model_mapping = {
+            'GPT-3.5': 'text-davinci-002-render-sha',
+            'GPT-3.5 Mobile': 'text-davinci-002-render-sha-mobile',
+            'GPT-4 Mobile': 'gpt-4-mobile',
+            'GPT-4': 'gpt-4',
+            'GPT-4 Browsing': 'gpt-4-browsing',
+            'GPT-4 Plugins': 'gpt-4-plugins',
+            '自定义': '自定义',
+        }
+        self.combo_box.addItems(list(self.model_mapping.keys()))
+        self.combo_box.currentIndexChanged.connect(self.update_model)
+        layout.addWidget(self.combo_box)
+
+        self.line_edit = QLineEdit()
+        layout.addWidget(self.line_edit)
+
+        button = QPushButton("提交修改")
+        button.clicked.connect(self.update_setting)
+        layout.addWidget(button)
+
+        self.setLayout(layout)
+
+        self.parent = parent
+
+    def update_model(self, index):
+        if self.combo_box.currentText() == "自定义":
+            self.line_edit.setEnabled(True)
+        else:
+            self.line_edit.setEnabled(False)
+
+    def update_setting(self):
+        if self.combo_box.currentText() == "自定义":
+            new_value = self.line_edit.text()
+        else:
+            new_value = self.model_mapping[self.combo_box.currentText()]
+        self.parent.settings["model"] = new_value
+        self.close()
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -128,6 +206,20 @@ class MainWindow(QMainWindow):
     def on_result(self, response):
         self.timer.stop()
         self.result_text.setHtml(markdown.markdown(response))  # Use setHtml with markdown instead of setPlainText
+
+    def change_url(self):
+        default_url = self.settings['url']
+        dialog = ChangeSettingsDialog("设置请求URL", "请输入新的请求URL：", default_url, "url", self)
+        dialog.exec()
+
+    def change_auth(self):
+        default_auth = self.settings['auth']
+        dialog = ChangeSettingsDialog("设置认证信息", "请输入新的认证信息：", default_auth, "auth", self)
+        dialog.exec()
+
+    def change_model(self):
+        dialog = ModelSettingsDialog(self)
+        dialog.exec()
 
 app = QApplication(sys.argv)
 window = MainWindow()
