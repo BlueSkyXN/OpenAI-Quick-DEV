@@ -1,10 +1,12 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTextEdit, QPushButton, QVBoxLayout, QWidget, QLabel, QMenu, QInputDialog, QMenuBar, QGridLayout, QComboBox, QDialog, QLineEdit, QDialogButtonBox
-from PyQt6.QtCore import QTimer, QThread, pyqtSignal
-from PyQt6.QtGui import QAction
 import requests
 import json
 import time
+import logging
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QTextEdit, QPushButton, QVBoxLayout, QWidget, QLabel, QMenu, QInputDialog, QLineEdit)
+from PyQt6.QtCore import QTimer, QThread, pyqtSignal
+
+logging.basicConfig(filename='app.log', level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def send_request(content, url, auth, model):
     headers = {
@@ -19,16 +21,19 @@ def send_request(content, url, auth, model):
         response = requests.post(url, headers=headers, data=json.dumps(data), timeout=150)
         response.raise_for_status()  # 将在HTTP错误时引发异常
     except requests.exceptions.RequestException as err:
+        logging.warning(f"Request sending error: {err}")
         return f"触发150s超时，请求发送错误: {err}"
     
     try:
         json_response = response.json()
     except json.JSONDecodeError as err:
+        logging.warning(f"Cannot parse JSON response: {err}")
         return f"无法解析JSON响应: {err}"
     
     if 'choices' in json_response and json_response['choices']:
         return json_response['choices'][0]['message']['content']
     else:
+        logging.warning("响应中没有 'choices' 键或 'choices' 为空")
         return "响应中没有 'choices' 键或 'choices' 为空"
 
 class SendRequestThread(QThread):
@@ -72,28 +77,37 @@ class MainWindow(QMainWindow):
         settings_menu = QMenu('设置', self)
         menuBar.addMenu(settings_menu)
 
-        settings_menu.addAction(QAction('更改请求URL', self, triggered=self.change_url))
-        settings_menu.addAction(QAction('更改认证信息', self, triggered=self.change_auth))
-        settings_menu.addAction(QAction('自定义模型', self, triggered=self.change_model))
+        settings_menu.addAction('更改请求URL', self.change_url)
+        settings_menu.addAction('更改认证信息', self.change_auth)
+        settings_menu.addAction('自定义模型', self.change_model)
 
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
 
     def change_url(self):
-        url, ok = QInputDialog.getText(self, '更改请求URL', '请输入新的请求URL：', QLineEdit.Normal, self.settings['url'])
-        if ok:
-            self.settings['url'] = url
-    
+        try:
+            url, ok = QInputDialog.getText(self, '更改请求URL', '请输入新的请求URL：', text=self.settings['url'])
+            if ok:
+                self.settings['url'] = url
+        except Exception as e:
+            logging.warning(f"Error changing URL: {e}")
+
     def change_auth(self):
-        auth, ok = QInputDialog.getText(self, '更改认证信息', '请输入新的认证信息：', QLineEdit.Normal, self.settings['auth'])
-        if ok:
-            self.settings['auth'] = auth
+        try:
+            auth, ok = QInputDialog.getText(self, '更改认证信息', '请输入新的认证信息：', text=self.settings['auth'])
+            if ok:
+                self.settings['auth'] = auth
+        except Exception as e:
+            logging.warning(f"Error changing authentication: {e}")
 
     def change_model(self):
-        model, ok = QInputDialog.getText(self, '自定义模型', '请输入新的模型名：', QLineEdit.Normal, self.settings['model'])
-        if ok:
-            self.settings['model'] = model
+        try:
+            model, ok = QInputDialog.getText(self, '自定义模型', '请输入新的模型名：', text=self.settings['model'])
+            if ok:
+                self.settings['model'] = model
+        except Exception as e:
+            logging.warning(f"Error changing model: {e}")
 
     def update_time(self):
         elapsed_time = time.time() - self.start_time
