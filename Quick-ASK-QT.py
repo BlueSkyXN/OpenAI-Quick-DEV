@@ -74,13 +74,18 @@ class ChangeSettingsDialog(QDialog):
         self.parent = parent
 
     def update_setting(self):
-        new_value = self.line_edit.text()
-        self.parent.settings[self.settings_key] = new_value
-        self.parent.config.set('Settings', self.settings_key, new_value)
-        with open('GPT-Config.ini', 'w') as configfile:
-            self.parent.config.write(configfile)
-        self.close()
-        
+        try:
+            new_value = self.line_edit.text()
+            self.parent.config.set('Settings', self.settings_key, new_value)
+            with open('GPT-Config.ini', 'w') as configfile:
+                self.parent.config.write(configfile)
+            self.parent.update_settings()
+            self.close()
+        except Exception as e:
+            logging.warning(f"Error updating setting in ChangeSettingsDialog: {e}")
+            self.close()
+
+
 class ModelSettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -123,15 +128,19 @@ class ModelSettingsDialog(QDialog):
             self.line_edit.setEnabled(False)
 
     def update_setting(self):
-        if self.combo_box.currentText() == "自定义":
-            new_value = self.line_edit.text()
-        else:
-            new_value = self.model_mapping[self.combo_box.currentText()]
-        self.parent.settings["model"] = new_value
-        self.parent.config.set('Settings', 'model', new_value)
-        with open('GPT-Config.ini', 'w') as configfile:
-            self.parent.config.write(configfile)
-        self.close()
+        try:
+            if self.combo_box.currentText() == "自定义":
+                new_value = self.line_edit.text()
+            else:
+                new_value = self.model_mapping[self.combo_box.currentText()]
+            self.parent.config.set('Settings', 'model', new_value)
+            with open('GPT-Config.ini', 'w') as configfile:
+                self.parent.config.write(configfile)
+            self.parent.update_settings()
+            self.close()
+        except Exception as e:
+            logging.warning(f"Error updating setting in ModelSettingsDialog: {e}")
+            self.close()
 
 
 class MainWindow(QMainWindow):
@@ -141,10 +150,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("快速向GPT提问")
 
         self.config = configparser.ConfigParser()
-        self.config.read('GPT-Config.ini')
-        self.settings = {'url': self.config.get('Settings', 'url', fallback="http://127.0.0.1:31480/v1/chat/completions"),
-                         'auth': self.config.get('Settings', 'auth', fallback="TotallySecurePassword"),
-                         'model': self.config.get('Settings', 'model', fallback="gpt-4-mobile")}
+        self.update_settings()
 
         layout = QVBoxLayout()
 
@@ -155,7 +161,7 @@ class MainWindow(QMainWindow):
         self.submit_button.clicked.connect(self.on_submit)
         layout.addWidget(self.submit_button)
 
-        self.result_text = QTextBrowser()  # Use QTextBrowser instead of QTextEdit
+        self.result_text = QTextBrowser()  
         layout.addWidget(self.result_text)
 
         self.time_label = QLabel()
@@ -164,7 +170,6 @@ class MainWindow(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_time)
 
-        self.settings = {'url': "http://127.0.0.1:31480/v1/chat/completions", 'auth': "TotallySecurePassword", 'model': "gpt-4-mobile"}
         menuBar = self.menuBar()
         settings_menu = QMenu('设置', self)
         menuBar.addMenu(settings_menu)
@@ -178,28 +183,18 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
 
     def change_url(self):
-        try:
-            url, ok = QInputDialog.getText(self, '更改请求URL', '请输入新的请求URL：', text=self.settings['url'])
-            if ok:
-                self.settings['url'] = url
-        except Exception as e:
-            logging.warning(f"Error changing URL: {e}")
+        default_url = self.settings['url']
+        dialog = ChangeSettingsDialog("设置请求URL", "请输入新的请求URL：", default_url, "url", self)
+        dialog.exec()
 
     def change_auth(self):
-        try:
-            auth, ok = QInputDialog.getText(self, '更改认证信息', '请输入新的认证信息：', text=self.settings['auth'])
-            if ok:
-                self.settings['auth'] = auth
-        except Exception as e:
-            logging.warning(f"Error changing authentication: {e}")
+        default_auth = self.settings['auth']
+        dialog = ChangeSettingsDialog("设置认证信息", "请输入新的认证信息：", default_auth, "auth", self)
+        dialog.exec()
 
     def change_model(self):
-        try:
-            model, ok = QInputDialog.getText(self, '自定义模型', '请输入新的模型名：', text=self.settings['model'])
-            if ok:
-                self.settings['model'] = model
-        except Exception as e:
-            logging.warning(f"Error changing model: {e}")
+        dialog = ModelSettingsDialog(self)
+        dialog.exec()
 
     def update_time(self):
         elapsed_time = time.time() - self.start_time
@@ -218,21 +213,16 @@ class MainWindow(QMainWindow):
 
     def on_result(self, response):
         self.timer.stop()
-        self.result_text.setHtml(markdown.markdown(response))  # Use setHtml with markdown instead of setPlainText
+        self.result_text.setHtml(markdown.markdown(response)) 
 
-    def change_url(self):
-        default_url = self.settings['url']
-        dialog = ChangeSettingsDialog("设置请求URL", "请输入新的请求URL：", default_url, "url", self)
-        dialog.exec()
-
-    def change_auth(self):
-        default_auth = self.settings['auth']
-        dialog = ChangeSettingsDialog("设置认证信息", "请输入新的认证信息：", default_auth, "auth", self)
-        dialog.exec()
-
-    def change_model(self):
-        dialog = ModelSettingsDialog(self)
-        dialog.exec()
+    def update_settings(self):
+        try:
+            self.config.read('GPT-Config.ini')
+            self.settings = {'url': self.config.get('Settings', 'url', fallback="http://127.0.0.1:31480/v1/chat/completions"),
+                             'auth': self.config.get('Settings', 'auth', fallback="TotallySecurePassword"),
+                             'model': self.config.get('Settings', 'model', fallback="gpt-4-mobile")}
+        except Exception as e:
+            logging.warning(f"Error updating settings in MainWindow: {e}") 
 
 
 
