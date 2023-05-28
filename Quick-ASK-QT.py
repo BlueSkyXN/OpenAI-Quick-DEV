@@ -4,6 +4,7 @@ import json
 import time
 import logging
 import markdown
+import configparser
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QTextEdit, QPushButton, QVBoxLayout, QWidget, QLabel, QMenu, QInputDialog, QLineEdit, QDialog, QComboBox, QTextBrowser)
 from PyQt6.QtCore import QTimer, QThread, pyqtSignal
 
@@ -75,8 +76,11 @@ class ChangeSettingsDialog(QDialog):
     def update_setting(self):
         new_value = self.line_edit.text()
         self.parent.settings[self.settings_key] = new_value
+        self.parent.config.set('Settings', self.settings_key, new_value)
+        with open('GPT-Config.ini', 'w') as configfile:
+            self.parent.config.write(configfile)
         self.close()
-
+        
 class ModelSettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -124,6 +128,9 @@ class ModelSettingsDialog(QDialog):
         else:
             new_value = self.model_mapping[self.combo_box.currentText()]
         self.parent.settings["model"] = new_value
+        self.parent.config.set('Settings', 'model', new_value)
+        with open('GPT-Config.ini', 'w') as configfile:
+            self.parent.config.write(configfile)
         self.close()
 
 
@@ -132,6 +139,12 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("快速向GPT提问")
+
+        self.config = configparser.ConfigParser()
+        self.config.read('GPT-Config.ini')
+        self.settings = {'url': self.config.get('Settings', 'url', fallback="http://127.0.0.1:31480/v1/chat/completions"),
+                         'auth': self.config.get('Settings', 'auth', fallback="TotallySecurePassword"),
+                         'model': self.config.get('Settings', 'model', fallback="gpt-4-mobile")}
 
         layout = QVBoxLayout()
 
@@ -220,6 +233,9 @@ class MainWindow(QMainWindow):
     def change_model(self):
         dialog = ModelSettingsDialog(self)
         dialog.exec()
+
+
+
 
 app = QApplication(sys.argv)
 window = MainWindow()
