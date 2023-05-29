@@ -1,0 +1,12 @@
+version: '3'
+services:
+  pandora:
+    image: pengzhile/pandora:latest
+    platform: linux/amd64
+    ports:
+      - 18848:8848
+    environment:
+      - PANDORA_SERVER=0.0.0.0:8848
+      - PANDORA_ACCESS_TOKEN=eyJhGUiOnsiZW1
+      ##- PANDORA_API=sk
+      ##-  PANDORA_VERBOSE=False
