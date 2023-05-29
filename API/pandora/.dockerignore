@@ -1,0 +1,11 @@
+.DS_Store
+
+.git/
+.idea/
+.run/
+.github/
+
+venv/
+build/
+dist/
+*.egg-info/
