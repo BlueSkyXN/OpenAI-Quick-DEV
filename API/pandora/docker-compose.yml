@@ -8,5 +8,5 @@ services:
     environment:
       - PANDORA_SERVER=0.0.0.0:8848
       - PANDORA_ACCESS_TOKEN=eyJhGUiOnsiZW1
-      ##- PANDORA_API=sk
+      ##-  PANDORA_API=sk
       ##-  PANDORA_VERBOSE=False
