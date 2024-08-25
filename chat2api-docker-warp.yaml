@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+  arkose:
+    image: lanqian528/funcaptcha_solver:latest
+    container_name: funcaptcha-solver
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    ports:
+      - "5006:5006"
+    networks:
+      - chat2api-network
+
+  chat2api:
+    image: lanqian528/chat2api:latest
+    container_name: chat2api
+    restart: unless-stopped
+    environment:
+      - ARKOSE_TOKEN_URL=http://arkose:5006/token
+      - PROXY_URL=socks5://openai:chatgpt@warp:1080
+      - TZ=Asia/Shanghai
+      - ENABLE_GATEWAY=false
+    ports:
+      - "5005:5005"
+    volumes:
+      - /DATA/AppData/Chat2API/app/data:/app/data
+    networks:
+      - chat2api-network
+
+  warp:
+    image: caomingjun/warp:latest
+    container_name: warp
+    restart: always
+    environment:
+      - WARP_SLEEP=2
+      - GOST_ARGS=-L openai:chatgpt@:1080
+    ports:
+      - "1080:1080"
+    sysctls:
+      net.ipv4.conf.all.src_valid_mark: "1"
+      net.ipv6.conf.all.disable_ipv6: "0"
+    networks:
+      - chat2api-network
+
+networks:
+  chat2api-network:
+    name: my_chat2api_network
