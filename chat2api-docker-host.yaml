@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  chat2api:
+    image: lanqian528/chat2api:latest
+    container_name: chat2api
+    restart: unless-stopped
+    network_mode: host  # 使用 host 网络模式
+    volumes:
+      - ./data:/app/data # 挂载一些需要保存的数据
+    environment:
+      - TZ=Asia/Shanghai # 设置时区
+      - ARKOSE_TOKEN_URL=http://127.0.0.1:5006/token # 使用 host 模式后，直接使用 localhost 访问 arkose 服务
+      - USER_AGENTS=["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/121.2.3.4"]
+
+  arkose:
+    image: lanqian528/funcaptcha_solver:latest
+    container_name: funcaptcha_solver
+    restart: unless-stopped
+    network_mode: host  # 使用 host 网络模式
+    environment:
+      - TZ=Asia/Shanghai # 设置时区
