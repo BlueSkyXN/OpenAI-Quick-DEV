@@ -4,6 +4,8 @@ import requests
 import random
 import time
 
+# More： https://www.blueskyxn.com/202408/7089.html
+
 app = Flask(__name__)
 
 def generate_user_agent():
