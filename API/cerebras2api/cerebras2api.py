@@ -5,6 +5,8 @@ import asyncio
 from aiohttp import web
 from datetime import datetime
 
+# More： https://www.blueskyxn.com/202408/7089.html
+# llama3.1-8b、llama3.1-70b
 # 调试信息开关
 DEBUG_MODE = False  # 设置为 True 可以打印详细的调试信息
 
