@@ -1,5 +1,6 @@
 // 参考了 https://github.com/lingo34/sambanova-ai-proxy/blob/main/cf-worker.js 但是那玩意不可用，无法过oneapi测试，因为目标接口不支持非流模式，所以我要进行一个转换
 // Meta-Llama-3.1-8B-Instruct、Meta-Llama-3.1-70B-Instruct、Meta-Llama-3.1-405B-Instruct、ignos/Mistral-T5-7B-v1、v1olet/v1olet_merged_dpo_7B、macadeliccc/WestLake-7B-v2-laser-truthy-dpo、cookinai/DonutLM-v1
+// More： https://www.blueskyxn.com/202408/7089.html
 const TARGET_URL = 'https://fast.snova.ai/api/completion';
 const MODEL_OVERRIDE = ''; // Set this to override the model
 
