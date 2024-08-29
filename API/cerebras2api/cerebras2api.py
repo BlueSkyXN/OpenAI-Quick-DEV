@@ -9,7 +9,8 @@ from datetime import datetime
 DEBUG_MODE = False  # 设置为 True 可以打印详细的调试信息
 
 # 定义固定的模型信息
-FIXED_MODEL = "llama3.1-8b"
+DEFAULT_MODEL = "llama3.1-8b"
+ALTERNATE_MODEL = "llama3.1-70b"
 FIXED_URL = "https://api.cerebras.ai/v1/chat/completions"
 FIXED_TEMPERATURE = 0.2
 FIXED_TOP_P = 1
@@ -28,11 +29,20 @@ async def send_request(auth_tokens, data):
             "authorization": f"Bearer {auth_tokens[0]}",
             "content-type": "application/json"
         }
+
+        # 检查传入的数据是否指定了 llama3.1-70b 模型
+        requested_model = data.get("model", DEFAULT_MODEL)
+        model_to_use = DEFAULT_MODEL
+        if requested_model == ALTERNATE_MODEL:
+            model_to_use = ALTERNATE_MODEL
+        
+        # 记录收到的模型请求以及实际使用的模型
+        log_basic_info(f"Requested model: {requested_model}, Using model: {model_to_use}")
         
         # 构造请求体
         payload = {
             "messages": data.get("messages", []),
-            "model": FIXED_MODEL,
+            "model": model_to_use,
             "temperature": FIXED_TEMPERATURE,
             "top_p": FIXED_TOP_P,
             "max_tokens": FIXED_MAX_TOKENS
@@ -46,17 +56,15 @@ async def send_request(auth_tokens, data):
             async with session.post(FIXED_URL, headers=headers, json=payload) as resp:
                 response_text = await resp.text()
 
-                # 打印基本信息
-                log_basic_info(f"Path: {FIXED_URL}, Status Code: {resp.status}")
+                # 尝试解析响应体
+                response_json = json.loads(response_text)
 
-                if DEBUG_MODE:
-                    print("Response Headers:", resp.headers)
-                    print("Response Body:", response_text)
+                # 提取total_time和total_tokens信息
+                total_tokens = response_json.get('usage', {}).get('total_tokens', 'N/A')
+                total_time = response_json.get('time_info', {}).get('total_time', 'N/A')
 
-                if resp.status == 403:
-                    log_basic_info("403 Forbidden Error - Possible Issues with Authorization or API Limits.")
-                elif resp.status != 200:
-                    log_basic_info(f"Error: Received unexpected status code {resp.status}")
+                # 打印所有关键信息到同一行
+                log_basic_info(f"Path: {FIXED_URL}, Status Code: {resp.status}, Total Tokens Used: {total_tokens}, Total Time: {total_time:.3f} seconds")
 
                 return response_text
 
@@ -102,6 +110,6 @@ async def handle_request(request):
 app = web.Application()
 app.router.add_post('/v1/chat/completions', handle_request)
 
-# 运行服务器
+# 运行服务器，监听5804端口
 if __name__ == '__main__':
-    web.run_app(app, port=5000)
+    web.run_app(app, port=5804)
