@@ -1,7 +1,7 @@
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
-
+// More： https://www.blueskyxn.com/202408/7089.html
 async function handleRequest(request) {
   try {
     // 解析请求体
